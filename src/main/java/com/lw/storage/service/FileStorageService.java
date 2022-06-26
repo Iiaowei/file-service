@@ -27,6 +27,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 @Service
@@ -90,14 +91,16 @@ public class FileStorageService {
                     .single();
 
             assert zipOutputStream != null;
-            return Mono.zip(Mono.just(zipOutputStream), single, Mono.just(zipName));
+            return Mono.zip(Mono.just(zipOutputStream), single, Mono.just(zipName), Mono.just(new ZipEntry(path)));
         }).flatMap(tuple2 -> {
             final ZipOutputStream zipOutputStream = tuple2.getT1();
             final byte[] bytes = tuple2.getT2();
             final String zipName = tuple2.getT3();
+            final ZipEntry zipEntry = tuple2.getT4();
 
             return Mono.fromSupplier(() -> {
                 try {
+                    zipOutputStream.putNextEntry(zipEntry);
                     zipOutputStream.write(bytes);
                 } catch (IOException e) {
                     e.printStackTrace();
