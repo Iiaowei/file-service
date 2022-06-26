@@ -1,11 +1,11 @@
 package com.lw.storage.controller;
 
+import com.lw.storage.ZipCompressDto;
 import com.lw.storage.service.FileStorageService;
 import com.lw.storage.support.BizResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -35,12 +35,12 @@ public class FileStorageController {
 
 
     @GetMapping("/download/{url}")
-    public ServerResponse download(@PathVariable("url") String url) {
-        return fileStorageService.download(url);
+    public Mono<Void> download(@PathVariable("url") Mono<String> mono) {
+        return fileStorageService.download(mono);
     }
 
     @PostMapping("/zip")
-    public ServerResponse download(@RequestBody List<String> paths) {
-        return fileStorageService.batchDownload(paths);
+    public Mono<Void> zipDownload(@RequestBody ZipCompressDto zipCompressDto) {
+        return fileStorageService.batchDownload(zipCompressDto);
     }
 }
