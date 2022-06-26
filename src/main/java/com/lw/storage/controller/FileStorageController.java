@@ -3,14 +3,12 @@ package com.lw.storage.controller;
 import com.lw.storage.ZipCompressDto;
 import com.lw.storage.service.FileStorageService;
 import com.lw.storage.support.BizResponse;
+import com.lw.storage.support.UploadResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
-import java.util.Map;
 
 /**
  * @author liaowei
@@ -29,8 +27,8 @@ public class FileStorageController {
     }
 
     @PostMapping("/upload")
-    public Mono<BizResponse<Map<String, Object>>> upload(@RequestPart("files") Flux<FilePart> fileParts) {
-        return fileStorageService.upload(fileParts);
+    public Mono<BizResponse<UploadResponse>> upload(@RequestPart("file") Mono<FilePart> mono) {
+        return fileStorageService.upload(mono);
     }
 
 
