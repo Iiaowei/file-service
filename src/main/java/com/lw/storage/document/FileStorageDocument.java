@@ -1,17 +1,15 @@
 package com.lw.storage.document;
 
 import lombok.Data;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedBy;
-import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.annotation.*;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
 @Data
-@Document
+@Document(value = "file-storage")
 public class FileStorageDocument {
+    @Id
     private String id;
     private String name;
     private String path;

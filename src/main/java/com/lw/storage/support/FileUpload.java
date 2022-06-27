@@ -2,7 +2,7 @@ package com.lw.storage.support;
 
 import cn.hutool.core.util.IdUtil;
 import com.lw.storage.document.FileStorageDocument;
-import com.lw.storage.repository.FileStorageRepository;
+import com.lw.storage.repository.FileStorageReactiveRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.codec.multipart.FilePart;
@@ -20,33 +20,33 @@ public class FileUpload {
     public static final Pattern pattern = Pattern.compile("([^[\\/:\\*\\?\"<>\\|]]+)");
     public static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    @Value("file.upload.path")
+    @Value("${file.upload.path}")
     private String uploadPath;
-    private FileStorageRepository fileStorageRepository;
+    private FileStorageReactiveRepository fileStorageReactiveRepository;
 
     @Autowired
-    public void setFileStorageRepository(FileStorageRepository fileStorageRepository) {
-        this.fileStorageRepository = fileStorageRepository;
+    public void setFileStorageRepository(FileStorageReactiveRepository fileStorageReactiveRepository) {
+        this.fileStorageReactiveRepository = fileStorageReactiveRepository;
     }
 
-    public Mono<String> storageFile(FilePart fp) {
-        File tmpFolder = Paths.get(uploadPath).toFile();
+    public Mono<FileStorageDocument> storageFile(FilePart fp) {
+        File tmpFolder = Paths.get(uploadPath + dateTimeFormatter.format(LocalDate.now())).toFile();
 
         if (!tmpFolder.exists() && tmpFolder.mkdirs()) {
             System.out.println("文件夹创建成功!");
         }
 
         FileStorage fileStorage = new FileStorage(IdUtil.simpleUUID(),
-                uploadPath + dateTimeFormatter.format(LocalDate.now()),
-                fp.filename(), fileStorageRepository);
+                uploadPath,
+                fp.filename(), fileStorageReactiveRepository);
 
         return fp.transferTo(new File(fileStorage.getFilepath()))
-                .then(Mono.fromSupplier(fileStorage::storage));
+                .then(fileStorage.storage());
     }
 
-    public Mono<BizResponse<UploadResponse>> createResponse(String fileId) {
+    public Mono<BizResponse<UploadResponse>> createResponse(FileStorageDocument document) {
         UploadResponse uploadResponse = new UploadResponse();
-        uploadResponse.setFileId(fileId);
+        uploadResponse.setFileId(document.getId());
         return Mono.just(BizResponse.ok(uploadResponse));
     }
 
@@ -55,27 +55,26 @@ public class FileUpload {
         private final String uploadPath;
         private final String filepath;
         private final String filename;
-        private final FileStorageRepository fileStorageRepository;
+        private final FileStorageReactiveRepository fileStorageReactiveRepository;
 
-        public FileStorage(String id, String filepath, String filename, FileStorageRepository fileStorageRepository) {
+        public FileStorage(String id, String filepath, String filename, FileStorageReactiveRepository fileStorageReactiveRepository) {
             this.id = id;
-            this.uploadPath = filepath.endsWith(File.pathSeparator) ? filepath : filepath + File.pathSeparator;
+            this.uploadPath = filepath.endsWith(File.separator) ? filepath : filepath + File.separator;
             this.filename = filename;
-            this.filepath = this.uploadPath + this.filename;
-            this.fileStorageRepository = fileStorageRepository;
+            this.filepath = this.uploadPath + dateTimeFormatter.format(LocalDate.now()) + File.separator + this.id;
+            this.fileStorageReactiveRepository = fileStorageReactiveRepository;
         }
 
         public String getFilepath() {
             return filepath;
         }
 
-        public String storage() {
+        public Mono<FileStorageDocument> storage() {
             FileStorageDocument storageDocument = new FileStorageDocument();
             storageDocument.setId(id);
             storageDocument.setName(pattern.matcher(filename).matches() ? filename : id);
             storageDocument.setPath(uploadPath);
-            fileStorageRepository.save(storageDocument);
-            return id;
+            return fileStorageReactiveRepository.save(storageDocument);
         }
     }
 }

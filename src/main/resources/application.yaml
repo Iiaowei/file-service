@@ -3,6 +3,11 @@ server:
 spring:
   application:
     name: file-service
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: test
 file:
   upload:
     path: E:\\temp\\

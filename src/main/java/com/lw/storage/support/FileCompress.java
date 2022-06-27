@@ -2,68 +2,69 @@ package com.lw.storage.support;
 
 import com.lw.storage.ZipCompressDto;
 import com.lw.storage.exception.FileDownlaodException;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.core.io.buffer.DefaultDataBufferFactory;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
+import com.lw.storage.repository.FileStorageReactiveRepository;
 import reactor.core.publisher.Mono;
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuple4;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
-import java.util.zip.ZipEntry;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.zip.ZipOutputStream;
 
-@Component
-public class FileCompress {
-    @Value("file.upload.path")
+public class FileCompress implements AutoCloseable {
+    private String filepath;
     private String uploadPath;
-
-    public Flux<Tuple2<String, String>> buildFlux(ZipCompressDto zipCompressDto) {
-        return Flux.zip(
-                Mono.just(zipCompressDto.getName()),
-                Flux.just(zipCompressDto.getPaths().toArray(new String[0]))
-        );
-    }
-
-    public Mono<Tuple4<ZipOutputStream, byte[], String, ZipEntry>> readBytes(Tuple2<String, String> tuple2) {
-        final String zipName = tuple2.getT1();
-        final String path = tuple2.getT2();
-
-        String filepath = uploadPath.endsWith(File.pathSeparator) ? uploadPath : uploadPath + File.pathSeparator;
-        ZipOutputStream zipOutputStream;
+    private String name;
+    private List<String> paths;
+    private FileStorageReactiveRepository fileStorageReactiveRepository;
+    private ZipOutputStream zipOutputStream;
+    public FileCompress(ZipCompressDto zipCompressDto, String uploadPath, FileStorageReactiveRepository fileStorageReactiveRepository) {
+        String name = zipCompressDto.getName();
+        name = name.endsWith(".zip") ? name : name + ".zip";
+        this.name = name.endsWith(".zip") ? name : name + ".zip";
+        this.paths = zipCompressDto.getPaths();
+        this.uploadPath = uploadPath;
+        this.filepath = uploadPath + FileUpload.dateTimeFormatter.format(LocalDate.now()) + File.separator + this.name;
         try {
-            zipOutputStream = new ZipOutputStream(new FileOutputStream(filepath + zipName + ".zip"), StandardCharsets.UTF_8);
+            this.zipOutputStream = new ZipOutputStream(new FileOutputStream(this.filepath), StandardCharsets.UTF_8);
         } catch (FileNotFoundException e) {
-            return Mono.error(FileDownlaodException::new);
+            throw new RuntimeException(e);
         }
-        final Mono<byte[]> single = DataBufferUtils.read(Paths.get(filepath + path), DefaultDataBufferFactory.sharedInstance, 1024)
-                .flatMap((a) -> Mono.just(a.asByteBuffer().array()))
-                .single();
-
-        return Mono.zip(Mono.just(zipOutputStream), single, Mono.just(zipName), Mono.just(new ZipEntry(path)));
+        this.fileStorageReactiveRepository = fileStorageReactiveRepository;
     }
 
-    public Mono<String> transferTo(Tuple4<ZipOutputStream, byte[], String, ZipEntry> tuple4) {
-        final ZipOutputStream zipOutputStream = tuple4.getT1();
-        final byte[] bytes = tuple4.getT2();
-        final String zipName = tuple4.getT3();
-        final ZipEntry zipEntry = tuple4.getT4();
 
-        return Mono.fromSupplier(() -> {
-            try {
-                zipOutputStream.putNextEntry(zipEntry);
-                zipOutputStream.write(bytes);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return zipName;
-        });
+    public void write() {
+//        fileStorageReactiveRepository.findAllById(paths).flatMap(document -> {
+//            String path = document.getPath();
+//            String name = document.getName();
+//            try {
+//                InputStream inputStream = Files.newInputStream(Paths.get(path + name));
+//            } catch (IOException e) {
+//                throw new RuntimeException(e);
+//            }
+//        });
+//        for (String path : paths) {
+//            CompletableFuture<FileStorageDocument> completableFuture = fileStorageReactiveRepository.findById(path).toFuture();
+//            completableFuture.thenAcceptAsync((document) -> {
+//                try (InputStream inputStream = Files.newInputStream(Paths.get(uploadPath + FileUpload.dateTimeFormatter.format(LocalDate.now()) + File.separator + path))) {
+//                    zipOutputStream.putNextEntry(new ZipEntry(document.getName()));
+//                    zipOutputStream.write(inputStream.readAllBytes());
+//                } catch (IOException e) {
+//                    throw new RuntimeException(e);
+//                }
+//            });
+//        }
+
+
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public void close() throws Exception {
+        zipOutputStream.close();
     }
 }

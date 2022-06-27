@@ -32,4 +32,15 @@ public class BizResponse<T> {
         return new BizResponse<>("9999", message);
     }
 
+    public String getCode() {
+        return code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public T getData() {
+        return data;
+    }
 }

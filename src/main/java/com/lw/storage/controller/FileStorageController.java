@@ -5,9 +5,10 @@ import com.lw.storage.service.FileStorageService;
 import com.lw.storage.support.BizResponse;
 import com.lw.storage.support.UploadResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -33,12 +34,12 @@ public class FileStorageController {
 
 
     @GetMapping("/download/{url}")
-    public Mono<Void> download(@PathVariable("url") Mono<String> mono) {
-        return fileStorageService.download(mono);
+    public Mono<ResponseEntity<byte[]>> download(@PathVariable("url") String url) {
+        return fileStorageService.download(Mono.just(url));
     }
 
     @PostMapping("/zip")
-    public Mono<Void> zipDownload(@RequestBody ZipCompressDto zipCompressDto) {
+    public Mono<ResponseEntity<byte[]>> zipDownload(@RequestBody ZipCompressDto zipCompressDto) {
         return fileStorageService.batchDownload(zipCompressDto);
     }
 }
